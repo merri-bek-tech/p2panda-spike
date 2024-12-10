@@ -1,3 +1,5 @@
+use std::env;
+
 use anyhow::{bail, Result};
 use gethostname::gethostname;
 use p2panda_core::{Hash, PrivateKey, PublicKey, Signature};
@@ -29,6 +31,7 @@ impl TopicId for ChatTopic {
 #[tokio::main]
 async fn main() -> Result<()> {
     let site_name = get_site_name();
+    println!("Starting client for site: {}", site_name);
 
     let network_slug = "merri-bek.tech";
     let network_id: NetworkId = Hash::new(network_slug).into();
@@ -50,7 +53,7 @@ async fn main() -> Result<()> {
                 FromNetwork::GossipMessage { bytes, .. } => {
                     match Message::decode_and_verify(&bytes) {
                         Ok(message) => {
-                            println!("Received {}: {}", message.public_key, message.text);
+                            println!("Received: {}", message.text);
                         }
                         Err(err) => {
                             eprintln!("invalid gossip message: {err}");
@@ -139,8 +142,12 @@ fn input_loop(line_tx: mpsc::Sender<String>) -> Result<()> {
 }
 
 fn get_site_name() -> String {
-    let hostname = gethostname();
-    return hostname.to_string_lossy().to_string();
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 {
+        return args[1].to_string();
+    }
+
+    return gethostname().to_string_lossy().to_string();
 }
 
 async fn announce_site(
