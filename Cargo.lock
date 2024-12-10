@@ -2510,12 +2510,16 @@ dependencies = [
 name = "p2panda-spike"
 version = "0.1.0"
 dependencies = [
+ "anyhow",
+ "ciborium",
  "p2panda-core",
  "p2panda-discovery",
  "p2panda-net",
  "p2panda-sync",
+ "rand",
  "serde",
  "tokio",
+ "tracing-subscriber",
 ]
 
 [[package]]
