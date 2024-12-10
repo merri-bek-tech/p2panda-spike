@@ -7,16 +7,6 @@ use p2panda_sync::TopicQuery;
 use rand::random;
 use serde::{Deserialize, Serialize};
 use tokio::sync::mpsc;
-use tracing_subscriber::prelude::*;
-use tracing_subscriber::EnvFilter;
-
-pub fn setup_logging() {
-    tracing_subscriber::registry()
-        .with(tracing_subscriber::fmt::layer().with_writer(std::io::stderr))
-        .with(EnvFilter::from_default_env())
-        .try_init()
-        .ok();
-}
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct ChatTopic(String, [u8; 32]);
@@ -37,8 +27,6 @@ impl TopicId for ChatTopic {
 
 #[tokio::main]
 async fn main() -> Result<()> {
-    setup_logging();
-
     let network_id = [0; 32];
     let topic = ChatTopic::new("my_chat");
 

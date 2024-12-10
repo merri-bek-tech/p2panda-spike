@@ -2519,7 +2519,6 @@ dependencies = [
  "rand",
  "serde",
  "tokio",
- "tracing-subscriber",
 ]
 
 [[package]]
