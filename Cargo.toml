@@ -6,6 +6,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.94"
 ciborium = "0.2.2"
+gethostname = "0.5.0"
 p2panda-core = "0.1.0"
 p2panda-discovery = "0.1.0"
 p2panda-net = "0.1.0"
