@@ -4,3 +4,9 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+p2panda-core = "0.1.0"
+p2panda-discovery = "0.1.0"
+p2panda-net = "0.1.0"
+p2panda-sync = "0.1.0"
+serde = "1.0.215"
+tokio = "1.42.0"
