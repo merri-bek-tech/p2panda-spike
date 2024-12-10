@@ -9,7 +9,6 @@ use p2panda_net::{NetworkBuilder, NetworkId, TopicId};
 use p2panda_sync::TopicQuery;
 use rand::random;
 use serde::{Deserialize, Serialize};
-use tokio::sync::mpsc;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct ChatTopic(String, [u8; 32]);
@@ -72,14 +71,6 @@ async fn main() -> Result<()> {
 
     announce_site(&private_key, &site_name, &tx).await?;
 
-    let (line_tx, mut line_rx) = mpsc::channel(1);
-    std::thread::spawn(move || input_loop(line_tx));
-
-    while let Some(text) = line_rx.recv().await {
-        let bytes = Message::sign_and_encode(&private_key, &text)?;
-        tx.send(ToNetwork::Message { bytes }).await.ok();
-    }
-
     tokio::signal::ctrl_c().await?;
 
     network.shutdown().await?;
@@ -128,16 +119,6 @@ impl Message {
         }
 
         Ok(message)
-    }
-}
-
-fn input_loop(line_tx: mpsc::Sender<String>) -> Result<()> {
-    let mut buffer = String::new();
-    let stdin = std::io::stdin();
-    loop {
-        stdin.read_line(&mut buffer)?;
-        line_tx.blocking_send(buffer.clone())?;
-        buffer.clear();
     }
 }
 
