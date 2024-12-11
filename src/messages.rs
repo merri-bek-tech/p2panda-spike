@@ -3,19 +3,15 @@ use p2panda_core::{PrivateKey, PublicKey, Signature};
 use rand::random;
 use serde::{Deserialize, Serialize};
 
-use crate::site_messages::SiteMessages;
-
-type Payload = SiteMessages;
-
 #[derive(Serialize, Deserialize)]
-pub struct Message {
+pub struct Message<Payload> {
     id: u32,
     signature: Signature,
     public_key: PublicKey,
     pub payload: Payload,
 }
 
-impl Message {
+impl<Payload: Serialize> Message<Payload> {
     pub fn sign_and_encode(private_key: &PrivateKey, payload: Payload) -> Result<Vec<u8>> {
         // Sign payload content
         let mut payload_bytes: Vec<u8> = Vec::new();
@@ -36,8 +32,11 @@ impl Message {
         Ok(message_bytes)
     }
 
-    pub fn decode_and_verify(bytes: &[u8]) -> Result<Message> {
-        let message: Message = ciborium::de::from_reader(bytes)?;
+    pub fn decode_and_verify<'a>(bytes: &'a [u8]) -> Result<Message<Payload>>
+    where
+        for<'de> Payload: Deserialize<'de>,
+    {
+        let message: Message<Payload> = ciborium::de::from_reader(bytes)?;
 
         // Verify signature
         let mut payload_bytes: Vec<u8> = Vec::new();
