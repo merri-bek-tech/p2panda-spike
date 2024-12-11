@@ -3,18 +3,24 @@ use p2panda_core::{PrivateKey, PublicKey, Signature};
 use rand::random;
 use serde::{Deserialize, Serialize};
 
-use crate::site_messages::SiteRegistration;
+use crate::site_messages::{SiteNotification, SiteRegistration};
+
+#[derive(Serialize, Deserialize)]
+pub enum Payload {
+    SiteRegistration(SiteRegistration),
+    SiteNotification(SiteNotification),
+}
 
 #[derive(Serialize, Deserialize)]
 pub struct Message {
     id: u32,
     signature: Signature,
     public_key: PublicKey,
-    pub payload: SiteRegistration,
+    pub payload: Payload,
 }
 
 impl Message {
-    pub fn sign_and_encode(private_key: &PrivateKey, payload: SiteRegistration) -> Result<Vec<u8>> {
+    pub fn sign_and_encode(private_key: &PrivateKey, payload: Payload) -> Result<Vec<u8>> {
         // Sign payload content
         let mut payload_bytes: Vec<u8> = Vec::new();
         ciborium::ser::into_writer(&payload, &mut payload_bytes)?;
@@ -26,17 +32,16 @@ impl Message {
             id: random(),
             signature,
             public_key: private_key.public_key(),
-            payload: payload,
+            payload,
         };
-        let mut bytes: Vec<u8> = Vec::new();
-        ciborium::ser::into_writer(&message, &mut bytes)?;
 
-        Ok(bytes)
+        let mut message_bytes: Vec<u8> = Vec::new();
+        ciborium::ser::into_writer(&message, &mut message_bytes)?;
+        Ok(message_bytes)
     }
 
-    pub fn decode_and_verify(bytes: &[u8]) -> Result<Self> {
-        // Decode message
-        let message: Self = ciborium::de::from_reader(bytes)?;
+    pub fn decode_and_verify(bytes: &[u8]) -> Result<Message> {
+        let message: Message = ciborium::de::from_reader(bytes)?;
 
         // Verify signature
         let mut payload_bytes: Vec<u8> = Vec::new();
@@ -45,7 +50,7 @@ impl Message {
             .public_key
             .verify(&payload_bytes, &message.signature)
         {
-            bail!("invalid signature");
+            bail!("Invalid signature");
         }
 
         Ok(message)
