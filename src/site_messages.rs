@@ -9,3 +9,9 @@ pub struct SiteRegistration {
 pub struct SiteNotification {
     pub notification: String,
 }
+
+#[derive(Serialize, Deserialize)]
+pub enum SiteMessages {
+    SiteRegistration(SiteRegistration),
+    SiteNotification(SiteNotification),
+}

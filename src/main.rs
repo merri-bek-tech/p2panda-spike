@@ -11,8 +11,8 @@ use std::env;
 mod messages;
 mod site_messages;
 
-use messages::{Message, Payload};
-use site_messages::SiteRegistration;
+use messages::Message;
+use site_messages::{SiteMessages, SiteRegistration};
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct ChatTopic(String, [u8; 32]);
@@ -49,7 +49,7 @@ async fn announce_site(
     tx.send(ToNetwork::Message {
         bytes: Message::sign_and_encode(
             private_key,
-            Payload::SiteRegistration(SiteRegistration {
+            SiteMessages::SiteRegistration(SiteRegistration {
                 site_name: site_name.to_string(),
             }),
         )?,
@@ -85,10 +85,10 @@ async fn main() -> Result<()> {
                 FromNetwork::GossipMessage { bytes, .. } => {
                     match Message::decode_and_verify(&bytes) {
                         Ok(message) => match message.payload {
-                            Payload::SiteRegistration(registration) => {
+                            SiteMessages::SiteRegistration(registration) => {
                                 println!("Received SiteRegistration: {:?}", registration);
                             }
-                            Payload::SiteNotification(notification) => {
+                            SiteMessages::SiteNotification(notification) => {
                                 println!("Received SiteNotification: {:?}", notification);
                             }
                         },

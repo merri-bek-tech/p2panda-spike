@@ -3,13 +3,9 @@ use p2panda_core::{PrivateKey, PublicKey, Signature};
 use rand::random;
 use serde::{Deserialize, Serialize};
 
-use crate::site_messages::{SiteNotification, SiteRegistration};
+use crate::site_messages::SiteMessages;
 
-#[derive(Serialize, Deserialize)]
-pub enum Payload {
-    SiteRegistration(SiteRegistration),
-    SiteNotification(SiteNotification),
-}
+type Payload = SiteMessages;
 
 #[derive(Serialize, Deserialize)]
 pub struct Message {
