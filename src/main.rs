@@ -9,8 +9,10 @@ use p2panda_net::network::{FromNetwork, ToNetwork};
 use p2panda_net::{NetworkBuilder, NetworkId, TopicId};
 use p2panda_sync::TopicQuery;
 use serde::{Deserialize, Serialize};
+use site_messages::SiteRegistration;
 
 mod messages;
+mod site_messages;
 
 #[derive(Clone, Debug, PartialEq, Eq, Hash, Deserialize, Serialize)]
 pub struct ChatTopic(String, [u8; 32]);
@@ -54,7 +56,7 @@ async fn main() -> Result<()> {
                 FromNetwork::GossipMessage { bytes, .. } => {
                     match Message::decode_and_verify(&bytes) {
                         Ok(message) => {
-                            println!("Received: {}", message.text);
+                            println!("Received: {}", message.payload.site_slug);
                         }
                         Err(err) => {
                             eprintln!("invalid gossip message: {err}");
@@ -98,7 +100,9 @@ async fn announce_site(
     tx.send(ToNetwork::Message {
         bytes: Message::sign_and_encode(
             &private_key,
-            &format!("{} has joined the chat", site_name),
+            SiteRegistration {
+                site_slug: site_name.to_string(),
+            },
         )?,
     })
     .await
