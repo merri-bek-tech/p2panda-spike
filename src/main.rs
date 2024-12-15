@@ -6,10 +6,12 @@ use p2panda_net::network::{FromNetwork, ToNetwork};
 use p2panda_net::{NetworkBuilder, NetworkId, TopicId};
 use p2panda_sync::TopicQuery;
 use serde::{Deserialize, Serialize};
+use sites::Sites;
 use std::env;
 
 mod messages;
 mod site_messages;
+mod sites;
 
 use messages::Message;
 use site_messages::{SiteMessages, SiteRegistration};
@@ -31,35 +33,10 @@ impl TopicId for ChatTopic {
     }
 }
 
-fn get_site_name() -> String {
-    let args: Vec<String> = env::args().collect();
-    if args.len() > 1 {
-        return args[1].to_string();
-    }
-
-    gethostname().to_string_lossy().to_string()
-}
-
-async fn announce_site(
-    private_key: &PrivateKey,
-    site_name: &str,
-    tx: &tokio::sync::mpsc::Sender<ToNetwork>,
-) -> Result<()> {
-    println!("Announcing myself: {}", site_name);
-    tx.send(ToNetwork::Message {
-        bytes: Message::sign_and_encode(
-            private_key,
-            SiteMessages::SiteRegistration(SiteRegistration {
-                site_name: site_name.to_string(),
-            }),
-        )?,
-    })
-    .await?;
-    Ok(())
-}
-
 #[tokio::main]
 async fn main() -> Result<()> {
+    let mut sites = Sites::build();
+
     let site_name = get_site_name();
     println!("Starting client for site: {}", site_name);
 
@@ -81,24 +58,7 @@ async fn main() -> Result<()> {
 
     tokio::task::spawn(async move {
         while let Some(event) = rx.recv().await {
-            match event {
-                FromNetwork::GossipMessage { bytes, .. } => {
-                    match Message::decode_and_verify(&bytes) {
-                        Ok(message) => match message.payload {
-                            SiteMessages::SiteRegistration(registration) => {
-                                println!("Received SiteRegistration: {:?}", registration);
-                            }
-                            SiteMessages::SiteNotification(notification) => {
-                                println!("Received SiteNotification: {:?}", notification);
-                            }
-                        },
-                        Err(err) => {
-                            eprintln!("Invalid gossip message: {}", err);
-                        }
-                    }
-                }
-                _ => panic!("no sync messages expected"),
-            }
+            handle_gossip_event(event, &mut sites);
         }
     });
 
@@ -114,4 +74,58 @@ async fn main() -> Result<()> {
     network.shutdown().await?;
 
     Ok(())
+}
+
+async fn announce_site(
+    private_key: &PrivateKey,
+    name: &str,
+    tx: &tokio::sync::mpsc::Sender<ToNetwork>,
+) -> Result<()> {
+    println!("Announcing myself: {}", name);
+    tx.send(ToNetwork::Message {
+        bytes: Message::sign_and_encode(
+            private_key,
+            SiteMessages::SiteRegistration(SiteRegistration {
+                name: name.to_string(),
+            }),
+        )?,
+    })
+    .await?;
+    Ok(())
+}
+
+fn handle_gossip_event(event: FromNetwork, sites: &mut Sites) {
+    match event {
+        FromNetwork::GossipMessage { bytes, .. } => match Message::decode_and_verify(&bytes) {
+            Ok(message) => {
+                handle_message(message, sites);
+            }
+            Err(err) => {
+                eprintln!("Invalid gossip message: {}", err);
+            }
+        },
+        _ => panic!("no sync messages expected"),
+    }
+}
+
+fn handle_message(message: Message<SiteMessages>, sites: &mut Sites) {
+    match message.payload {
+        SiteMessages::SiteRegistration(registration) => {
+            println!("Received SiteRegistration: {:?}", registration);
+            sites.register(registration.name);
+            sites.log();
+        }
+        SiteMessages::SiteNotification(notification) => {
+            println!("Received SiteNotification: {:?}", notification);
+        }
+    }
+}
+
+fn get_site_name() -> String {
+    let args: Vec<String> = env::args().collect();
+    if args.len() > 1 {
+        return args[1].to_string();
+    }
+
+    gethostname().to_string_lossy().to_string()
 }
