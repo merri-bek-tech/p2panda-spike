@@ -54,11 +54,9 @@ async fn main() -> Result<()> {
 
     let (tx, mut rx, ready) = network.subscribe(topic).await?;
 
-    announce_site(&private_key, &site_name, &tx).await?;
-
     tokio::task::spawn(async move {
         while let Some(event) = rx.recv().await {
-            handle_gossip_event(event, &mut sites);
+            handle_network_event(event, &mut sites);
         }
     });
 
@@ -67,7 +65,14 @@ async fn main() -> Result<()> {
 
     println!("found other peers, you're ready to chat!");
 
-    announce_site(&private_key, &site_name, &tx).await?;
+    // spawn a task to announce the site every 30 seconds
+    tokio::task::spawn(async move {
+        let mut interval = tokio::time::interval(tokio::time::Duration::from_secs(30));
+        loop {
+            interval.tick().await;
+            announce_site(&private_key, &site_name, &tx).await.ok();
+        }
+    });
 
     tokio::signal::ctrl_c().await?;
 
@@ -94,7 +99,7 @@ async fn announce_site(
     Ok(())
 }
 
-fn handle_gossip_event(event: FromNetwork, sites: &mut Sites) {
+fn handle_network_event(event: FromNetwork, sites: &mut Sites) {
     match event {
         FromNetwork::GossipMessage { bytes, .. } => match Message::decode_and_verify(&bytes) {
             Ok(message) => {
